@@ -76,24 +76,31 @@ Em aproximadamente 5 minutos, serão gerados na pasta benchmark os arquivos de e
 
 Os resultados observados foram os seguintes:
 
-Hotspot
-    Inicialização: 3.778 segundos
-    Tamanho da Imagem: 481MB
+[cols="3*",options="header"]
+|===
+|
+|Tamanho da Imagem
+|Tempo de Inicialização
 
-OpenJ9
-    Inicialização: 3.413 segundos
-    Tamanho da Imagem: 515MB
+|*Hotspot*
+|481MB
+|3.778 segundos
 
-OpenJ9 Shared Classes
-    Inicialização: 1.58 segundos
-    Tamanho da Imagem: 515MB
+|*OpenJ9*
+|515MB
+|3.413 segundos
 
-OpenJ9 Shared Classes com jlink
-    Inicialização: 3.914 segundos
-    Tamanho da Imagem: 130MB
+|*OpenJ9 Shared Classes*
+|515MB
+|1.58 segundos
 
-OpenJ9 Shared Classes com jlink e Shared Classes
-    Inicialização: 1.515 segundos
-    Tamanho da Imagem: 131MB
+|*OpenJ9 com jlink*
+|130MB
+|3.914 segundos
+
+|*OpenJ9 com jlink e Shared Classes*
+|131MB
+|1.515 segundos
+|===
 
 Na pasta benchmark existe o arquivo `consolidado.xlsx`, com o resultado dos testes de uso de memória e CPU durante a execução dos testes.
