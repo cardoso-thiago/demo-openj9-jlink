@@ -1,0 +1,99 @@
+= Demo Hotspot vs OpenJ9 (+ jdeps com jlink)
+
+Projeto simples de demonstração e benchmark da VM Hotspot em relação à VM OpenJ9. O projeto também contempla uma pequena demonstração do uso do jdeps com o link.
+
+== Como Executar o Benchmark
+
+O benchmark foi realizado item a item, utilizando o mesmo projeto como base, alterando apenas o Dockerfile para cada um dos cenários. Para os testes, foram criados dois scripts na pasta benchmark. O `collect_docker_stats.sh` que pode ser executado antes de iniciar os testes, coleta as informações da aplicação utilizando o `docker stats` a cada 5 minutos. Ele deve ser interrompido manualmente com o Ctrl + C. Sua execução gera um csv com as informações coletadas durante o processo. Ao finalizar, é ideal guardar o arquivo em outro local ou renomeá-lo, pois em uma nova execução um novo arquivo será gerado sobrescrevendo o da execução anterior.
+Na mesma pasta, existe também o `run_tests.sh`. O script faz a inserção de 1000 registros na tabela embarcada da aplicação e em seguida, utiliza o https://github.com/fortio/fortio[Fortio] para realizar um pequeno teste de carga por 5 minutos.
+
+=== Executando o Teste com a VM Hotspot
+
+Para realizar o processo, basta seguir os seguintes passos:
+
+* Na raiz do projeto, faça o build desse cenário com o comando: `docker build -t demo_hotspot -f Dockerfile_Hotspot .`
+* Execute o seguinte comando para iniciar a aplicação: `docker run -p 9090:9090 --name demo_hotspot demo_hotspot:latest`
+* Em outro terminal, acesse a pasta benchmark e execute o comando: `sh collect_docker_stats.sh`
+* Em outro terminal, acesse a pasta benchmark e execute o comando: `sh run_tests.sh`
+
+Em aproximadamente 5 minutos, serão gerados na pasta benchmark os arquivos de execução do _Fortio_ e o csv com os dados do `docker stats` para essa execução. A pasta *hotspot* já contém um resultado de um desses testes.
+
+=== Executando o Teste com a VM OpenJ9
+
+Para realizar o processo, basta seguir os seguintes passos:
+
+* Na raiz do projeto, faça o build desse cenário com o comando: `docker build -t demo_openj9 -f Dockerfile_OpenJ9 .`
+* Execute o seguinte comando para iniciar a aplicação: `docker run -p 9090:9090 --name demo_openj9 demo_openj9:latest`
+* Em outro terminal, acesse a pasta benchmark e execute o comando: `sh collect_docker_stats.sh`
+* Em outro terminal, acesse a pasta benchmark e execute o comando: `sh run_tests.sh`
+
+Em aproximadamente 5 minutos, serão gerados na pasta benchmark os arquivos de execução do _Fortio_ e o csv com os dados do `docker stats` para essa execução. A pasta *openj9* já contém um resultado de um desses testes.
+
+=== Executando o Teste com a VM OpenJ9 e o Class Data Sharing Habilitado
+
+Para realizar o processo, basta seguir os seguintes passos:
+
+* Na raiz do projeto, faça o build desse cenário com o comando: `docker build -t demo_openj9_shared -f Dockerfile_OpenJ9_SharedClasses .`
+* Crie um volume onde o cache será armazenado com o comando: `docker volume create java-shared-classes`
+* Execute o seguinte comando para iniciar a aplicação: `docker run -p 9090:9090 --mount source=java-shared-classes,target=/cache --name demo_openj9_shared demo_openj9_shared:latest`
+* Em outro terminal, acesse a pasta benchmark e execute o comando: `sh collect_docker_stats.sh`
+* Em outro terminal, acesse a pasta benchmark e execute o comando: `sh run_tests.sh`
+
+Em aproximadamente 5 minutos, serão gerados na pasta benchmark os arquivos de execução do _Fortio_ e o csv com os dados do `docker stats` para essa execução. A pasta *openj9_shared_classes* já contém um resultado de um desses testes.
+
+=== Executando o Teste com a VM OpenJ9 e JDK Custom usando o jlink
+
+Para realizar o processo, basta seguir os seguintes passos:
+
+* Na raiz do projeto, faça o build desse cenário com o comando: `docker build -t demo_openj9_jlink -f Dockerfile_OpenJ9_Jlink .`
+* Execute o seguinte comando para iniciar a aplicação: `docker run -p 9090:9090 --name demo_openj9_jlink demo_openj9_jlink:latest`
+* Em outro terminal, acesse a pasta benchmark e execute o comando: `sh collect_docker_stats.sh`
+* Em outro terminal, acesse a pasta benchmark e execute o comando: `sh run_tests.sh`
+
+Em aproximadamente 5 minutos, serão gerados na pasta benchmark os arquivos de execução do _Fortio_ e o csv com os dados do `docker stats` para essa execução. A pasta *openj9_jlink* já contém um resultado de um desses testes.
+
+*Observação*: Para o jlink é necessário informar os módulos que serão utilizados na criação da JDK Custom. Idealmente o processo seria realizado no próprio Dockerfile utilizando o *jdeps*, mas para aplicações Spring, na minha experiência ainda não foi possível realizar esse processo. Para obtenção da maioria dos módulos necessários, o seguinte comando foi executado por fora: `jdeps -cp 'build/lib/*' --multi-release 11 -recursive -s build/libs/demo-openj9-jlink-0.0.1-SNAPSHOT.jar`.
+
+No arquivo de build existe uma task para copiar as dependências da aplicação para uma outra pasta, processo esse realizado apenas para que possa ser passado como parâmetro na opção *-cp* do comando do jdeps.
+
+O retorno desse comando retorna a maioria das dependências necessárias para o jlink e devem ser utilizadas apenas os módulos que são da jdk. Além dos módulos do comando, foi necessário adicionar também o módulo `java.security.jgss`, que não consta na lista do jdeps mas sem ele, ocorre erro na subida da aplicação.
+
+=== Executando o Teste com a VM OpenJ9, JDK Custom usando o jlink e o Class Data Sharing Habilitado
+
+Para realizar o processo, basta seguir os seguintes passos:
+
+* Na raiz do projeto, faça o build desse cenário com o comando: `docker build -t demo_openj9_jlink_shared -f Dockerfile_OpenJ9_Jlink_SharedClasses .`
+* Crie um volume onde o cache será armazenado com o comando: `docker volume create java-shared-classes`
+* Execute o seguinte comando para iniciar a aplicação: `docker run -p 9090:9090 --mount source=java-shared-classes,target=/cache --name demo_openj9_jlink_shared demo_openj9_jlink_shared:latest`
+* Em outro terminal, acesse a pasta benchmark e execute o comando: `sh collect_docker_stats.sh`
+* Em outro terminal, acesse a pasta benchmark e execute o comando: `sh run_tests.sh`
+
+Em aproximadamente 5 minutos, serão gerados na pasta benchmark os arquivos de execução do _Fortio_ e o csv com os dados do `docker stats` para essa execução. A pasta *openj9_jlink* já contém um resultado de um desses testes.
+
+*Observação*: A mesma observação da seção anterior, referente ao jlink, vale aqui. Adicionalmente, para utilização do Class Data Sharing, é necessário informar mais um módulo para o jlink: `openj9.sharedclasses`.
+
+== Resultados
+
+Os resultados observados foram os seguintes:
+
+Hotspot
+    Inicialização: 3.778 segundos
+    Tamanho da Imagem: 481MB
+
+OpenJ9
+    Inicialização: 3.413 segundos
+    Tamanho da Imagem: 515MB
+
+OpenJ9 Shared Classes
+    Inicialização: 1.58 segundos
+    Tamanho da Imagem: 515MB
+
+OpenJ9 Shared Classes com jlink
+    Inicialização: 3.914 segundos
+    Tamanho da Imagem: 130MB
+
+OpenJ9 Shared Classes com jlink e Shared Classes
+    Inicialização: 1.515 segundos
+    Tamanho da Imagem: 131MB
+
+Na pasta benchmark existe o arquivo `consolidado.xlsx`, com o resultado dos testes de uso de memória e CPU durante a execução dos testes.
